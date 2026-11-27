@@ -1,7 +1,10 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { usePersistentNumber, usePersistentJson } from '../../hooks/usePersistentState';
 import {
+  hasCompleteLocalSchedulerGridDeviceSettings,
+  persistLocalSchedulerGridDeviceSettingsPatch,
   readLocalSchedulerGridDeviceSettings,
+  resolveInitialSchedulerGridDeviceSettings,
   SCHEDULER_GRID_DEVICE_SETTING_KEYS,
   syncLoadSchedulerGridDeviceSettings,
   syncSaveSchedulerGridDeviceSettings,
@@ -76,25 +79,56 @@ const normalizeColRatios = (ratios, colCount) => Array.from({ length: colCount }
   return Number.isFinite(value) && value > 0 ? Math.max(MIN_COL_RATIO, value) : 1;
 });
 
-export default function useScheduleResizeState({ colCount }) {
-  const [colRatios, setColRatios] = usePersistentJson(SHOCKWAVE_COL_RATIOS_KEY, null);
-  const [dayColWidth, setDayColWidth] = usePersistentNumber(SHOCKWAVE_DAY_COL_WIDTH_KEY, 0);
-  const [rowHeight, setRowHeight] = usePersistentNumber(SHOCKWAVE_ROW_HEIGHT_KEY, 23, MIN_SCHEDULE_ROW_HEIGHT);
+const PLACEHOLDER_SETTINGS_ID = '00000000-0000-0000-0000-000000000000';
+
+export default function useScheduleResizeState({ colCount, settings = null }) {
+  const isRealSettingsLoaded = Boolean(
+    settings?.id && settings.id !== PLACEHOLDER_SETTINGS_ID
+  );
+  const initialDeviceSettingsRef = useRef(null);
+  if (initialDeviceSettingsRef.current === null) {
+    const localSnapshot = readLocalSchedulerGridDeviceSettings();
+    const resolvedInitial = isRealSettingsLoaded
+      ? resolveInitialSchedulerGridDeviceSettings({
+          localSnapshot,
+          monthlySettings: settings?.monthly_settlement_settings,
+        })
+      : { values: localSnapshot.values, remotePatch: {}, hasRemotePatch: false };
+    if (resolvedInitial.hasRemotePatch) {
+      persistLocalSchedulerGridDeviceSettingsPatch(resolvedInitial.remotePatch);
+    }
+    initialDeviceSettingsRef.current = {
+      ...localSnapshot,
+      values: resolvedInitial.values,
+      hydratedFromSettings: isRealSettingsLoaded,
+    };
+  }
+  const [colRatios, setColRatios] = usePersistentJson(
+    SHOCKWAVE_COL_RATIOS_KEY,
+    initialDeviceSettingsRef.current.values.colRatios ?? null
+  );
+  const [dayColWidth, setDayColWidth] = usePersistentNumber(
+    SHOCKWAVE_DAY_COL_WIDTH_KEY,
+    initialDeviceSettingsRef.current.values.dayColWidth ?? 0
+  );
+  const [rowHeight, setRowHeight] = usePersistentNumber(
+    SHOCKWAVE_ROW_HEIGHT_KEY,
+    initialDeviceSettingsRef.current.values.rowHeight ?? 23,
+    MIN_SCHEDULE_ROW_HEIGHT
+  );
   const [storedTimeColWidth, setTimeColWidth] = usePersistentNumber(
     SHOCKWAVE_TIME_COL_WIDTH_KEY,
-    TIME_COL_WIDTH,
+    initialDeviceSettingsRef.current.values.timeColWidth ?? TIME_COL_WIDTH,
   );
   const timeColWidth = useMemo(
     () => clampScheduleTimeColWidth(storedTimeColWidth),
     [storedTimeColWidth],
   );
-  const initialDeviceSettingsRef = useRef(null);
-  if (initialDeviceSettingsRef.current === null) {
-    // Persistent hooks restore their cookie backup before this snapshot.
-    initialDeviceSettingsRef.current = readLocalSchedulerGridDeviceSettings();
-  }
   const [isDeviceSettingsLoading, setIsDeviceSettingsLoading] = useState(
-    () => !initialDeviceSettingsRef.current.hasAny
+    () => !(
+      hasCompleteLocalSchedulerGridDeviceSettings(initialDeviceSettingsRef.current) ||
+      initialDeviceSettingsRef.current.hydratedFromSettings
+    )
   );
   const mobileWidthResizeArmedUntilRef = useRef(0);
 
@@ -138,6 +172,12 @@ export default function useScheduleResizeState({ colCount }) {
       || readLocalSchedulerGridDeviceSettings();
     if (localSnapshot.hasAny) {
       syncSaveSchedulerGridDeviceSettings(localSnapshot.values);
+    }
+    if (localSnapshot.hydratedFromSettings || hasCompleteLocalSchedulerGridDeviceSettings(localSnapshot)) {
+      setIsDeviceSettingsLoading(false);
+      return () => {
+        active = false;
+      };
     }
     async function load() {
       await syncLoadSchedulerGridDeviceSettings({

@@ -113,6 +113,34 @@ export function readLocalSchedulerGridDeviceSettings(storageArg) {
     values,
     present,
     hasAny: Object.keys(values).length > 0,
+    hasAll: DEVICE_SETTING_FIELDS.every((field) => Boolean(present[field])),
+  };
+}
+
+export function hasCompleteLocalSchedulerGridDeviceSettings(localSnapshot) {
+  return DEVICE_SETTING_FIELDS.every((field) => Boolean(localSnapshot?.present?.[field]));
+}
+
+export function resolveInitialSchedulerGridDeviceSettings({
+  localSnapshot,
+  monthlySettings,
+  identity = getDeviceSettingsIdentity(),
+} = {}) {
+  const snapshot = localSnapshot || readLocalSchedulerGridDeviceSettings();
+  const remotePatch = monthlySettings
+    ? resolveSchedulerGridDeviceSettingsPatch({
+        monthlySettings,
+        identity,
+        localSnapshot: snapshot,
+      })
+    : {};
+  return {
+    values: {
+      ...remotePatch,
+      ...(snapshot?.values || {}),
+    },
+    remotePatch,
+    hasRemotePatch: Object.keys(remotePatch).length > 0,
   };
 }
 

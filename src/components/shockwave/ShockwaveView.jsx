@@ -227,6 +227,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     },
     [memos, pendingMemoOverrides]
   );
+  const defaultEditMergeSpanRef = useRef({});
   const getDefaultEditingMergeSpanForKey = useCallback((key) => {
     const directMerge = defaultEditMergeSpanRef.current[key]?.mergeSpan;
     if (directMerge) return directMerge;
@@ -263,6 +264,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const patientHistoryTargetCellRef = useRef(null);
   const deferredPatientHistoryAutoFillRef = useRef(null);
   const selectedPatientHistoryGroupKey = useMemo(() => {
+    if (!patientHistoryModalOpen) return 'shockwave';
     const groupTargetCell = resolvePatientHistoryGroupTargetCell({
       modalOpen: patientHistoryModalOpen,
       capturedCell: patientHistoryTargetCellRef.current,
@@ -295,9 +297,14 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     settings,
   ]);
   const [hoverCell, setHoverCell] = useState(null);
-  const insuranceMemos = useMemo(() => Object.fromEntries(Object.entries(effectiveMemos).map(([key, memo]) => [
-    key, Object.prototype.hasOwnProperty.call(pendingCellBgColors, key) ? { ...memo, bg_color: pendingCellBgColors[key] } : memo,
-  ])), [effectiveMemos, pendingCellBgColors]);
+  const insuranceMemos = useMemo(() => {
+    if (!pendingCellBgColors || Object.keys(pendingCellBgColors).length === 0) {
+      return effectiveMemos;
+    }
+    return Object.fromEntries(Object.entries(effectiveMemos).map(([key, memo]) => [
+      key, Object.prototype.hasOwnProperty.call(pendingCellBgColors, key) ? { ...memo, bg_color: pendingCellBgColors[key] } : memo,
+    ]));
+  }, [effectiveMemos, pendingCellBgColors]);
   const hoverInsuranceRow = useMemo(() => {
     if (!hoverCell) return null;
     const { weekIdx, dayIdx, rowIdx, colIdx } = hoverCell;
@@ -305,21 +312,39 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     return memo ? { ...memo, year: currentYear, month: currentMonth,
       week_index: weekIdx, day_index: dayIdx, row_index: rowIdx, col_index: colIdx } : null;
   }, [hoverCell, insuranceMemos, currentYear, currentMonth]);
+  const pendingHistoryPatientRow = useMemo(() => {
+    if (!patientHistoryModalOpen || !patientHistoryModalData.loading) return null;
+    const chart = String(patientHistoryModalData.searchChart || '').trim();
+    const name = String(patientHistoryModalData.searchName || '').trim();
+    return chart && name ? { chart_number: chart, patient_name: name } : null;
+  }, [
+    patientHistoryModalOpen,
+    patientHistoryModalData.loading,
+    patientHistoryModalData.searchChart,
+    patientHistoryModalData.searchName,
+  ]);
   const insuranceUsage = useInsuranceUsage({
     logs: patientHistoryModalOpen ? patientHistoryModalData.logs : [],
-    historyRevision: patientHistoryModalOpen ? patientHistoryModalData.insuranceRevision || 0 : 0,
+    pendingPatientRow: pendingHistoryPatientRow,
+    historyRevision: patientHistoryModalOpen
+      ? (patientHistoryModalData.insuranceRevision || patientHistoryModalData.requestRevision || 0)
+      : 0,
     hoverRow: hoverInsuranceRow, memos: insuranceMemos, year: currentYear, month: currentMonth, settings,
   });
-  const patientHistoryLogGroups = useMemo(() => buildPatientHistoryLogGroups({
-    logs: insuranceUsage.logs,
-    bodyFilters: patientHistoryBodyFilters,
-    prescriptionFilters: patientHistoryPrescriptionFilters,
-    selectedGroupKey: selectedPatientHistoryGroupKey,
-    selectedTreatmentGroups: patientHistoryTreatmentTab === 'all'
-      ? PATIENT_HISTORY_GROUPS.map((group) => group.key)
-      : [patientHistoryTreatmentTab],
-    sortOrder: patientHistorySortOrder,
-  }), [
+  const patientHistoryLogGroups = useMemo(() => {
+    if (!patientHistoryModalOpen) return [];
+    return buildPatientHistoryLogGroups({
+      logs: insuranceUsage.logs,
+      bodyFilters: patientHistoryBodyFilters,
+      prescriptionFilters: patientHistoryPrescriptionFilters,
+      selectedGroupKey: selectedPatientHistoryGroupKey,
+      selectedTreatmentGroups: patientHistoryTreatmentTab === 'all'
+        ? PATIENT_HISTORY_GROUPS.map((group) => group.key)
+        : [patientHistoryTreatmentTab],
+      sortOrder: patientHistorySortOrder,
+    });
+  }, [
+    patientHistoryModalOpen,
     patientHistoryBodyFilters,
     insuranceUsage.logs,
     patientHistoryPrescriptionFilters,
@@ -328,26 +353,33 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     selectedPatientHistoryGroupKey,
   ]);
   const patientHistoryTreatmentTabOptions = useMemo(
-    () => [
-      { key: 'all', label: '전체', count: patientHistoryModalData.logs.length },
-      ...buildPatientHistoryTreatmentFilterOptions(patientHistoryModalData.logs)
-        .map((option) => ({ ...option, label: option.label.replace(' 내역', '') })),
-    ],
-    [patientHistoryModalData.logs]
+    () => (patientHistoryModalOpen
+      ? [
+          { key: 'all', label: '전체', count: patientHistoryModalData.logs.length },
+          ...buildPatientHistoryTreatmentFilterOptions(patientHistoryModalData.logs)
+            .map((option) => ({ ...option, label: option.label.replace(' 내역', '') })),
+        ]
+      : []),
+    [patientHistoryModalOpen, patientHistoryModalData.logs]
   );
-  const patientHistoryInsuranceWidth = useMemo(() => getPatientHistoryInsuranceWidth(patientHistoryLogGroups), [patientHistoryLogGroups]);
+  const patientHistoryInsuranceWidth = useMemo(
+    () => (patientHistoryModalOpen ? getPatientHistoryInsuranceWidth(patientHistoryLogGroups) : 0),
+    [patientHistoryModalOpen, patientHistoryLogGroups]
+  );
   const patientHistoryModalLayout = useMemo(
     () => getPatientHistoryModalLayout(patientHistoryLogGroups, patientHistoryInsuranceWidth),
     [patientHistoryLogGroups, patientHistoryInsuranceWidth]
   );
   const patientHistoryColumnWidths = useMemo(
-    () => getPatientHistoryColumnWidths(
-      patientHistoryLogGroups.length,
-      patientHistoryTreatmentTab === 'all',
-      patientHistoryTreatmentTab,
-      patientHistoryInsuranceWidth
-    ),
-    [patientHistoryLogGroups.length, patientHistoryTreatmentTab, patientHistoryInsuranceWidth]
+    () => (patientHistoryModalOpen
+      ? getPatientHistoryColumnWidths(
+          patientHistoryLogGroups.length,
+          patientHistoryTreatmentTab === 'all',
+          patientHistoryTreatmentTab,
+          patientHistoryInsuranceWidth
+        )
+      : []),
+    [patientHistoryModalOpen, patientHistoryLogGroups.length, patientHistoryTreatmentTab, patientHistoryInsuranceWidth]
   );
   const patientHistoryPrescriptionOptions = useMemo(() => ({
     shockwave: Array.isArray(prescriptionScheduleSettings?.schedulerPrescriptions?.shockwave)
@@ -418,7 +450,6 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
   const editDraftRef = useRef(null);
   const editAutosaveTimerRef = useRef(null);
   const supersededScheduleDraftsRef = useRef(new Map());
-  const defaultEditMergeSpanRef = useRef({});
   const cellSaveVersionRef = useRef({});
   const saveMemoRef = useRef(queuedOnSaveMemo);
   const scheduleDateRef = useRef({ year: currentYear, month: currentMonth });
@@ -464,7 +495,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     startTimeColResize,
     therapistColsCSS,
     isDeviceSettingsLoading,
-  } = useScheduleResizeState({ colCount });
+  } = useScheduleResizeState({ colCount, settings });
   const effectiveDayOverrides = useMemo(
     () => getMonthlyDayOverrides(settings?.day_overrides, currentYear, currentMonth),
     [settings?.day_overrides, currentYear, currentMonth]
@@ -2180,6 +2211,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     manualTherapists,
     monthlyTherapists,
     monthlyManualTherapists,
+    monthlyTherapistsByMonth,
     selectedCell,
     editingCell,
     editValue,
@@ -3050,6 +3082,18 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
     }
   }, [baseTimeSlots.length, colCount, selectSingleCell, getAdjacentCell, moveEditInputCaret, settings, currentYear, currentMonth, handleCellSave, memos, pendingCellBgColors, cellKey, handleOpenBodyPartMenu, handleOpenMemoMenu, setEditingCell, prescriptionScheduleSettings.doseTags, prescriptionScheduleSettings.hiddenPrescriptions]);
 
+  const handleKeyDownRef = useRef(handleKeyDown);
+  handleKeyDownRef.current = handleKeyDown;
+  const cellHandleKeyDown = useCallback((event) => {
+    handleKeyDownRef.current?.(event);
+  }, []);
+
+  const handleEditKeyDownRef = useRef(handleEditKeyDown);
+  handleEditKeyDownRef.current = handleEditKeyDown;
+  const cellHandleEditKeyDown = useCallback((event, w, d, r, c) => {
+    handleEditKeyDownRef.current?.(event, w, d, r, c);
+  }, []);
+
   const handleChartSelectorClose = useCallback((selected) => {
     if (!chartSelector) return;
     chartSelector.resolve(selected || null);
@@ -3246,7 +3290,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
           if (tooltipRef.current) positionTooltip(e.clientX, e.clientY);
         }}
       >
-      {(isScheduleMonthLoading || isDeviceSettingsLoading) && (
+      {(isScheduleMonthLoading || isDeviceSettingsLoading || isTextSettingsLoading) && (
         <div className="shockwave-month-loading" role="status" aria-live="polite">
           <div className="shockwave-month-loading-card">
             <span className="shockwave-month-loading-spinner" />
@@ -3255,7 +3299,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         </div>
       )}
       {useMemo(() => {
-        if (isDeviceSettingsLoading) return null;
+        if (isDeviceSettingsLoading || isTextSettingsLoading) return null;
         return weeks.map((weekDays, weekIdx) => {
           const daysContainerWidth = dayColWidth
             ? dayColWidth * weekDays.length + timeColWidth + 4
@@ -3527,8 +3571,8 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
                               handleCellMouseDown={handleCellMouseDown} handleCellMouseEnter={handleCellMouseEnter}
                               setHoverCell={setHoverCell} handleCellDoubleClick={handleCellDoubleClick}
                               handleCellContextMenu={handleCellContextMenu} editInputRef={editInputRef}
-                              handleCellSave={handleCellSave} handleEditKeyDown={handleEditKeyDown}
-                              handleKeyDown={handleKeyDown}
+                              handleCellSave={handleCellSave} handleEditKeyDown={cellHandleEditKeyDown}
+                              handleKeyDown={cellHandleKeyDown}
                               imeOpenRef={imeOpenRef} setImePreviewCell={setImePreviewCell}
                               editDraftRef={editDraftRef} scheduleEditDraftAutosave={scheduleEditDraftAutosave}
                               promoteFocusedInputToEditor={promoteFocusedInputToEditor}
@@ -3591,7 +3635,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         );
       });
       }, [
-        isDeviceSettingsLoading, weeks, dayColWidth, timeColWidth, todayWeekIdx, today, getTimeSlotsForDay,
+        isDeviceSettingsLoading, isTextSettingsLoading, weeks, dayColWidth, timeColWidth, todayWeekIdx, today, getTimeSlotsForDay,
         therapistColsCSS, colCount, getTherapistNameForDate, activeColRatios,
         resetColRatios, resetTimeColWidth, resizeTimeColWidthBy,
         startColResize, startDayResize, startRowResize, startTimeColResize,
@@ -3601,7 +3645,7 @@ export default function ShockwaveView({ therapists, settings, memos = {}, memosL
         isLastHourSlot, effectivePrescriptionColors, effectiveShinjangPatientDelimiterStyles, editValue,
         handleCellMouseDown, handleCellMouseEnter, setHoverCell,
         handleCellDoubleClick, handleCellContextMenu,
-        handleEditKeyDown, handleKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave,
+        cellHandleEditKeyDown, cellHandleKeyDown, scheduleEditDraftAutosave, promoteFocusedInputToEditor, handleCellSave,
         cellKey, rowHeight, canManageSchedulerSettings,
         prescriptionScheduleSettings.visitLineBreakPrescriptions,
         getDefaultEditingMergeSpanForKey,

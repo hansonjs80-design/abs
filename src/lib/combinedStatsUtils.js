@@ -213,26 +213,28 @@ function buildStandardTreatmentSummary({
 function buildShinjangTreatmentSummary({
   shockwaveRows,
   manualTherapyRows,
+  reassignedRows: precomputedReassignedRows = null,
   therapists,
   monthlyShinjangTherapists,
   settings,
   isAdmin,
   applyCryoDeduction = true,
 }) {
-  const mergedRows = mergeShinjangSprayLogs({
-    shockwaveRows,
-    manualTherapyRows,
-    shockwavePrescriptionPrices: settings?.prescription_prices,
-    manualTherapyPrescriptionPrices: settings?.prescription_prices,
-    shockwaveCryoPrescriptions: settings?.cryo_prescriptions,
-    shockwaveCryoPrices: settings?.cryo_prices,
-    manualTherapyCryoPrescriptions: settings?.cryo_prescriptions,
-    manualTherapyCryoPrices: settings?.cryo_prices,
-  });
-  const reassignedRows = applyMonthlyShinjangSprayTherapists(
-    mergedRows,
-    monthlyShinjangTherapists
-  );
+  const reassignedRows = Array.isArray(precomputedReassignedRows)
+    ? precomputedReassignedRows
+    : applyMonthlyShinjangSprayTherapists(
+        mergeShinjangSprayLogs({
+          shockwaveRows,
+          manualTherapyRows,
+          shockwavePrescriptionPrices: settings?.prescription_prices,
+          manualTherapyPrescriptionPrices: settings?.prescription_prices,
+          shockwaveCryoPrescriptions: settings?.cryo_prescriptions,
+          shockwaveCryoPrices: settings?.cryo_prices,
+          manualTherapyCryoPrescriptions: settings?.cryo_prescriptions,
+          manualTherapyCryoPrices: settings?.cryo_prices,
+        }),
+        monthlyShinjangTherapists
+      );
   const hiddenKeys = new Set(
     (Array.isArray(settings?.hidden_prescriptions) ? settings.hidden_prescriptions : [])
       .map(normalizePrescriptionKey)
@@ -384,6 +386,7 @@ export function buildCombinedStatsMonthSummary({
     ? buildShinjangTreatmentSummary({
         shockwaveRows,
         manualTherapyRows,
+        reassignedRows: shinjangSourceRows,
         therapists,
         monthlyShinjangTherapists,
         settings: shinjangSettings,

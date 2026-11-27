@@ -369,9 +369,11 @@ export default function ManualTherapyStatsPage() {
     };
   }, [loadManualTherapists, loadShockwaveSettings]);
 
-  const reloadScheduleData = useCallback(async ({ force = false } = {}) => {
+  const reloadScheduleData = useCallback(async ({ force = false, silent = false } = {}) => {
     const requestId = ++scheduleReloadRequestRef.current;
-    setIsScheduleLoading(true);
+    if (!silent) {
+      setIsScheduleLoading(true);
+    }
     try {
       const [loadedMonthlyTherapists, loadedMemos] = await Promise.all([
         loadMonthlyTherapists(currentYear, currentMonth, 'manual_therapy'),
@@ -561,7 +563,7 @@ export default function ManualTherapyStatsPage() {
         const now = Date.now();
         if (now - lastVisibilityRefreshAtRef.current < 30000) return;
         lastVisibilityRefreshAtRef.current = now;
-        reloadScheduleData({ force: false });
+        reloadScheduleData({ force: false, silent: true });
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);

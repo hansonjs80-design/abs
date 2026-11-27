@@ -448,6 +448,73 @@ export async function syncTodayManualTherapyScheduleToStats(params) {
   return run;
 }
 
+export function collectCompletedManualScheduleRowsForMonth({
+  year,
+  month,
+  memos,
+  therapists,
+  monthlyTherapists,
+  settings = {},
+  upToToday = false,
+} = {}) {
+  if (!memos) return [];
+
+  const today = getTodayKST();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let endDay = daysInMonth;
+  if (upToToday && Number(year) === today.getFullYear() && Number(month) === today.getMonth() + 1) {
+    endDay = today.getDate();
+  }
+
+  const weeks = generateShockwaveCalendar(year, month);
+  const monthPadded = String(month).padStart(2, '0');
+  const collected = [];
+
+  getRenderedManualScheduleEntries({
+    year,
+    month,
+    memos,
+    therapists,
+    monthlyTherapists,
+    settings,
+  }).forEach(([key, cell]) => {
+    const [w, d, r, c] = key.split('-').map(Number);
+    const dayInfo = weeks[w]?.[d];
+    if (!dayInfo || !dayInfo.isCurrentMonth) return;
+    if (dayInfo.day < 1 || dayInfo.day > endDay) return;
+    if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
+    if (getScheduleItemTreatmentGroup(cell, settings, year, month) !== 'manual_therapy') return;
+
+    const therapistName = resolveManualTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
+    const parsed = parseManualTherapyEntry(cell?.content, therapists, therapistName, {
+      prescription: cell?.prescription,
+      doseTag: getConfiguredDoseTag(settings, year, month, cell?.prescription),
+    });
+    if (!parsed) return;
+
+    collected.push({
+      day: dayInfo.day,
+      r,
+      c,
+      row: {
+        scheduler_cell_key: buildSchedulerCellKey(year, month, w, d, r, c),
+        date: `${year}-${monthPadded}-${String(dayInfo.day).padStart(2, '0')}`,
+        patient_name: parsed.patientName,
+        chart_number: parsed.chartNumber || '',
+        visit_count: parsed.visitCount || '1',
+        body_part: cell?.body_part || '',
+        therapist_name: parsed.therapistName || therapistName,
+        prescription: parsed.durationLabel,
+        prescription_count: 1,
+        source: 'scheduler',
+      },
+    });
+  });
+
+  collected.sort((a, b) => (a.day - b.day) || (a.r - b.r) || (a.c - b.c));
+  return collected.map((entry) => entry.row);
+}
+
 export async function syncMonthManualTherapyScheduleToStats({
   year,
   month,

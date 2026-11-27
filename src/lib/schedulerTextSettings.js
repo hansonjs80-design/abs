@@ -186,20 +186,26 @@ export function setMonthlySchedulerTextSettings(settings, _year, _month, nextCon
   return settings?.monthly_settlement_settings || {};
 }
 
+export function resolveRemoteSchedulerTextSettings(
+  monthlySettings,
+  identity = getDeviceSettingsIdentity()
+) {
+  const deviceTextSettings = monthlySettings?.[DEVICE_SETTINGS_FIELD];
+  const remoteSettings = getDeviceSettingsForIdentity(deviceTextSettings, identity);
+  if (!remoteSettings) return null;
+  return normalizeSchedulerTextSettings(remoteSettings);
+}
+
 export async function syncLoadTextSettings({ localSnapshot } = {}) {
   const local = localSnapshot || readLocalSchedulerTextSettings();
   if (local.hasValue) return local.settings;
 
   try {
     const monthlySettings = await loadShockwaveSettingsJson({ supabaseClient: supabase });
-    const deviceTextSettings = monthlySettings?.[DEVICE_SETTINGS_FIELD];
-    const remoteSettings = getDeviceSettingsForIdentity(
-      deviceTextSettings,
-      getDeviceSettingsIdentity()
-    );
-    if (!remoteSettings) return null;
+    const normalizedRemote = resolveRemoteSchedulerTextSettings(monthlySettings);
+    if (!normalizedRemote) return null;
 
-    const normalized = persistLocalSchedulerTextSettings(remoteSettings);
+    const normalized = persistLocalSchedulerTextSettings(normalizedRemote);
     dispatchTextSettingsChanged();
     return normalized;
   } catch (error) {

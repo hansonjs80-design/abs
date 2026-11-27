@@ -63,6 +63,16 @@ export function getShinjangSprayInsuranceCategory(prescription) {
   return 'shockwave';
 }
 
+const insuranceCalendarCache = new Map();
+
+function getCachedInsuranceCalendar(year, month) {
+  const key = `${year}-${month}`;
+  if (!insuranceCalendarCache.has(key)) {
+    insuranceCalendarCache.set(key, generateShockwaveCalendar(year, month));
+  }
+  return insuranceCalendarCache.get(key);
+}
+
 export function normalizeInsuranceRecord(row, settings, allowAdjacentMonth = false) {
   if (!row) return null;
   const patient = getInsurancePatient(row);
@@ -71,7 +81,7 @@ export function normalizeInsuranceRecord(row, settings, allowAdjacentMonth = fal
   const month = Number(row.month || (row.date && String(row.date).slice(5, 7)));
   const isSchedule = row.week_index != null && Number.isFinite(year) && Number.isFinite(month);
   const day = isSchedule
-    ? generateShockwaveCalendar(year, month)?.[Number(row.week_index)]?.[Number(row.day_index)]
+    ? getCachedInsuranceCalendar(year, month)?.[Number(row.week_index)]?.[Number(row.day_index)]
     : null;
   // Adjacent-month calendar cells are representations, not extra appointments.
   if (isSchedule && day && !day.isCurrentMonth && !allowAdjacentMonth) return null;

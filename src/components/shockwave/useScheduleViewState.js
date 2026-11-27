@@ -2,7 +2,9 @@ import { useMemo, useState, useEffect, useRef } from 'react';
 
 import {
   getEffectiveSchedulerTextSettings,
+  persistLocalSchedulerTextSettings,
   readLocalSchedulerTextSettings,
+  resolveRemoteSchedulerTextSettings,
   SCHEDULER_TEXT_SETTINGS_EVENT,
   SCHEDULER_TEXT_SETTINGS_KEY,
   syncLoadTextSettings,
@@ -127,16 +129,45 @@ export default function useScheduleViewState({
     }, {});
   }, [settings, currentYear, currentMonth]);
 
+  const isRealSettingsLoaded = Boolean(
+    settings?.id && settings.id !== '00000000-0000-0000-0000-000000000000'
+  );
   const initialTextSettingsRef = useRef(null);
   if (initialTextSettingsRef.current === null) {
-    initialTextSettingsRef.current = readLocalSchedulerTextSettings();
+    const localTextSnapshot = readLocalSchedulerTextSettings();
+    if (!localTextSnapshot.hasValue && isRealSettingsLoaded) {
+      const remoteTextSettings = resolveRemoteSchedulerTextSettings(
+        settings?.monthly_settlement_settings
+      );
+      if (remoteTextSettings) {
+        persistLocalSchedulerTextSettings(remoteTextSettings);
+        initialTextSettingsRef.current = {
+          settings: remoteTextSettings,
+          hasValue: true,
+          hydratedFromSettings: true,
+        };
+      } else {
+        initialTextSettingsRef.current = {
+          ...localTextSnapshot,
+          hydratedFromSettings: true,
+        };
+      }
+    } else {
+      initialTextSettingsRef.current = {
+        ...localTextSnapshot,
+        hydratedFromSettings: isRealSettingsLoaded,
+      };
+    }
   }
   const [effectiveSchedulerTextSettings, setEffectiveSchedulerTextSettings] = useState(
     () => initialTextSettingsRef.current.settings
   );
 
   const [isTextSettingsLoading, setIsTextSettingsLoading] = useState(
-    () => !initialTextSettingsRef.current.hasValue
+    () => !(
+      initialTextSettingsRef.current.hasValue ||
+      initialTextSettingsRef.current.hydratedFromSettings
+    )
   );
 
   useEffect(() => {
@@ -164,6 +195,12 @@ export default function useScheduleViewState({
     const localSnapshot = initialTextSettingsRef.current || readLocalSchedulerTextSettings();
     if (localSnapshot.hasValue) {
       syncSaveTextSettings(localSnapshot.settings);
+      setIsTextSettingsLoading(false);
+      return () => { active = false; };
+    }
+    if (localSnapshot.hydratedFromSettings) {
+      setIsTextSettingsLoading(false);
+      return () => { active = false; };
     }
     syncLoadTextSettings({ localSnapshot }).then((loaded) => {
       if (active) {

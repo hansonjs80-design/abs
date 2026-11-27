@@ -47,13 +47,16 @@ class ShockwavePageErrorBoundary extends React.Component {
 export default function ShockwavePage() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [loadError, setLoadError] = useState('');
+  const [lastReadyMonthKey, setLastReadyMonthKey] = useState('');
   const {
     currentYear,
     currentMonth,
     therapists,
+    therapistsLoaded,
     loadTherapists,
     loadManualTherapists,
     shockwaveSettings,
+    shockwaveSettingsLoaded,
     loadShockwaveSettings,
     shockwaveMemos,
     shockwaveMemosLoadedKey,
@@ -160,10 +163,21 @@ export default function ShockwavePage() {
     visibleTherapistLoadedKey: monthlyTherapistVisibleLoadKeys?.shockwave,
     staffMemosLoadedKey,
     holidaysLoadedKey,
+    shockwaveSettingsLoaded: shockwaveSettingsLoaded !== false,
+    therapistsLoaded: therapistsLoaded !== false,
   });
+  const currentMonthKey = `${Number(currentYear)}-${Number(currentMonth)}`;
+  const effectiveLastReadyMonthKey = currentMonthReady ? currentMonthKey : lastReadyMonthKey;
+
+  useEffect(() => {
+    if (currentMonthReady && lastReadyMonthKey !== currentMonthKey) {
+      setLastReadyMonthKey(currentMonthKey);
+    }
+  }, [currentMonthKey, currentMonthReady, lastReadyMonthKey]);
+
   const keepScheduleMounted = shouldKeepScheduleMounted({
     currentMonthReady,
-    lastLoadedMonthKey: shockwaveMemosLoadedKey,
+    lastLoadedMonthKey: effectiveLastReadyMonthKey,
     loadError,
   });
 
@@ -194,7 +208,12 @@ export default function ShockwavePage() {
             </button>
           </div>
         ) : (
-          <div style={{ padding: 24 }}>스케줄을 불러오는 중...</div>
+          <div className="shockwave-month-loading" style={{ height: 'auto', paddingTop: 28 }} role="status" aria-live="polite">
+            <div className="shockwave-month-loading-card">
+              <span className="shockwave-month-loading-spinner" />
+              <span>{currentYear}년 {String(currentMonth).padStart(2, '0')}월 스케줄 불러오는 중</span>
+            </div>
+          </div>
         )}
       </div>
     </ShockwavePageErrorBoundary>

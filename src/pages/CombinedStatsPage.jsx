@@ -12,15 +12,17 @@ import {
   COMBINED_STATS_TREATMENTS,
 } from '../lib/combinedStatsUtils';
 import { normalizeManualTherapyLogRows } from '../lib/manualTherapyLogUtils';
-import { syncMonthManualTherapyScheduleToStats } from '../lib/manualTherapyUtils';
+import { collectCompletedManualScheduleRowsForMonth } from '../lib/manualTherapyUtils';
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../lib/recentPeriodUtils';
 import { getEffectiveSettlementSettings } from '../lib/settlementSettings';
-import { syncMonthShockwaveScheduleToStats } from '../lib/shockwaveSyncUtils';
+import { collectCompletedShockwaveScheduleRowsForMonth } from '../lib/shockwaveSyncUtils';
 import { fetchAllPaginatedRows } from '../lib/scheduleStatsSyncUtils';
 import {
+  buildScheduleMemoMapForStats,
   getRecentScheduleMonthTargets,
   loadScheduleMemosForStatsMonth,
   loadStatsMonthlyTherapists,
+  prefetchScheduleRowsForStatsMonth,
   prefetchStatsMonthlyTherapists,
   resolveScheduleMemosForStatsMonth,
 } from '../lib/statsScheduleSourceUtils';
@@ -639,15 +641,33 @@ export default function CombinedStatsPage() {
         (min, target) => Math.min(min, Number(target.year) || currentYear),
         Number(currentYear)
       );
+      const needsCurrentMonthTarget = targetsToLoad.some(
+        (target) => Number(target.year) === Number(currentYear) && Number(target.month) === Number(currentMonth)
+      );
+      const preloadedVisibleCurrentMemos = !force
+        && needsCurrentMonthTarget
+        && shockwaveMemosLoadedKeyRef.current === `${currentYear}-${currentMonth}`
+        ? shockwaveMemosRef.current
+        : null;
 
-      const [loadedShockwaveTherapists, loadedManualTherapists, loadedSettings, historicalLogs] = await Promise.all([
+      const [
+        loadedShockwaveTherapists,
+        loadedManualTherapists,
+        loadedSettings,
+        historicalLogs,
+        ,
+        prefetchedCurrentScheduleRows,
+      ] = await Promise.all([
         loadTherapists({ force }),
         (includeManual || includeShinjang) && isAdmin ? loadManualTherapists({ force }) : Promise.resolve([]),
         loadShockwaveSettings({ force }),
         needsHistoricalMonths
           ? fetchHistoricalLogs()
           : Promise.resolve({ shockwaveMap: new Map(), manualMap: new Map(), isLoaded: false }),
-        prefetchStatsMonthlyTherapists({ minYear: minTargetYear, rosterQueryCache }),
+        prefetchStatsMonthlyTherapists({ minYear: minTargetYear, rosterQueryCache, force }),
+        needsCurrentMonthTarget && !preloadedVisibleCurrentMemos
+          ? prefetchScheduleRowsForStatsMonth({ year: currentYear, month: currentMonth, force })
+          : Promise.resolve(null),
       ]);
       if (requestId !== requestIdRef.current) return;
 
@@ -667,7 +687,7 @@ export default function CombinedStatsPage() {
           && isCurrentMonth
           && shockwaveMemosLoadedKeyRef.current === `${target.year}-${target.month}`
           ? shockwaveMemosRef.current
-          : null;
+          : preloadedVisibleCurrentMemos;
 
         const [
           memos,
@@ -675,13 +695,23 @@ export default function CombinedStatsPage() {
           monthlyManualTherapists,
         ] = await Promise.all([
           isCurrentMonth
-            ? resolveScheduleMemosForStatsMonth({
-                year: target.year,
-                month: target.month,
-                settings,
-                visibleMemos: visibleMemosForCurrentMonth,
-                fallbackLoader: loadScheduleMemosForStatsMonth,
-              })
+            ? (
+                visibleMemosForCurrentMonth
+                  ? Promise.resolve(visibleMemosForCurrentMonth)
+                  : Array.isArray(prefetchedCurrentScheduleRows)
+                    ? Promise.resolve(buildScheduleMemoMapForStats(prefetchedCurrentScheduleRows, {
+                        year: target.year,
+                        month: target.month,
+                        settings,
+                      }))
+                    : resolveScheduleMemosForStatsMonth({
+                        year: target.year,
+                        month: target.month,
+                        settings,
+                        visibleMemos: null,
+                        fallbackLoader: (params) => loadScheduleMemosForStatsMonth({ ...params, force }),
+                      })
+              )
             : Promise.resolve({}),
           loadStatsMonthlyTherapists({
             year: target.year,
@@ -718,25 +748,30 @@ export default function CombinedStatsPage() {
         let shockwaveRows;
         let manualRows;
         if (isCurrentMonth) {
-          // Reuse the same schedule calculation without waiting for DB replacement and re-fetch.
-          const [shockwave, manual] = await Promise.all([
-            shouldLoadShockwaveLogs
-              ? syncMonthShockwaveScheduleToStats({
-                  year: target.year, month: target.month, memos,
-                  therapists: baseShockwaveTherapists, monthlyTherapists: monthlyShockwaveTherapists,
-                  settings, upToToday: true, scheduleAuthoritative: true, emitEvent: false, collectOnly: true,
-                })
-              : Promise.resolve({ rebuiltRows: [] }),
-            shouldLoadManual
-              ? syncMonthManualTherapyScheduleToStats({
-                  year: target.year, month: target.month, memos,
-                  therapists: baseManualTherapists, monthlyTherapists: monthlyManualTherapists,
-                  settings, upToToday: true, scheduleAuthoritative: true, emitEvent: false, collectOnly: true,
-                })
-              : Promise.resolve({ rebuiltRows: [] }),
-          ]);
-          shockwaveRows = shockwave.rebuiltRows;
-          manualRows = manual.rebuiltRows;
+          // 전체 통계는 과거 회차(visit_count)/부위(body_part) 이력 역조회가 전혀 필요 없으므로
+          // DB 이력 조회(8회) 없이 메모에서 1회 패스로 즉시 집계 행을 생성해 초기 로딩 속도와 전송량을 대폭 절감한다.
+          shockwaveRows = shouldLoadShockwaveLogs
+            ? collectCompletedShockwaveScheduleRowsForMonth({
+                year: target.year,
+                month: target.month,
+                memos,
+                therapists: baseShockwaveTherapists,
+                monthlyTherapists: monthlyShockwaveTherapists,
+                settings,
+                upToToday: true,
+              })
+            : [];
+          manualRows = shouldLoadManual
+            ? collectCompletedManualScheduleRowsForMonth({
+                year: target.year,
+                month: target.month,
+                memos,
+                therapists: baseManualTherapists,
+                monthlyTherapists: monthlyManualTherapists,
+                settings,
+                upToToday: true,
+              })
+            : [];
         } else {
           const monthKey = `${Number(target.year)}-${String(Number(target.month)).padStart(2, '0')}`;
           if (historicalLogs?.isLoaded) {
@@ -798,10 +833,21 @@ export default function CombinedStatsPage() {
           includedTreatments: effectiveIncludedTreatments,
         };
         const adjusted = buildCombinedStatsMonthSummary(summaryInput);
-        return {
-          ...adjusted,
-          withoutCryoDeduction: buildCombinedStatsMonthSummary({ ...summaryInput, applyCryoDeduction: false }),
-        };
+        let cachedWithoutCryoDeduction;
+        Object.defineProperty(adjusted, 'withoutCryoDeduction', {
+          enumerable: true,
+          configurable: true,
+          get() {
+            if (!cachedWithoutCryoDeduction) {
+              cachedWithoutCryoDeduction = buildCombinedStatsMonthSummary({
+                ...summaryInput,
+                applyCryoDeduction: false,
+              });
+            }
+            return cachedWithoutCryoDeduction;
+          },
+        });
+        return adjusted;
       };
       const loadedBatchSummaries = await loadStatsMonthsProgressively({
         targets: targetsToLoad,

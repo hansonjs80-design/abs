@@ -15,7 +15,10 @@ import ShockwaveDataGrid from './ShockwaveDataGrid';
 import ShockwaveSettlementView from './ShockwaveSettlementView';
 import ShockwaveNewPatientsView from './ShockwaveNewPatientsView';
 import SettlementSettingsPanel from './SettlementSettingsPanel';
-import { getEffectiveSettlementSettings } from '../../lib/settlementSettings';
+import {
+  buildPrescriptionClassificationSignature,
+  getEffectiveSettlementSettings,
+} from '../../lib/settlementSettings';
 import { formatRecentPeriodLabel, parseRecentPeriodMonths } from '../../lib/recentPeriodUtils';
 import { isAdminUser } from '../../lib/authPermissions';
 import { TREATMENT_COMPLETE_BG } from '../../lib/schedulerUtils';
@@ -726,10 +729,19 @@ export default function ShockwaveStatsView({
     if (!isCurrentScheduleReady) return undefined;
     if (!currentLogsReady || isCurrentSyncing) return undefined;
 
+    const recentMonthTargets = getRecentScheduleMonthTargets({
+      currentYear,
+      currentMonth,
+      recentPeriodMonths,
+    });
+    const prescriptionSettingsKey = buildPrescriptionClassificationSignature(
+      shockwaveSettings,
+      recentMonthTargets
+    );
     const therapistKey = safeTherapists
       .map((therapist, index) => `${therapist?.slot_index ?? index}:${therapist?.name || ''}`)
       .join('|');
-    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}:${scheduleLayoutSettingsKey}`;
+    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}:${scheduleLayoutSettingsKey}:${prescriptionSettingsKey}`;
     const recentCacheKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}`;
     const cachedRecent = shockwaveRecentCache.get(recentCacheKey);
     if (cachedRecent?.syncKey === syncKey) {
@@ -741,7 +753,7 @@ export default function ShockwaveStatsView({
     let cancelled = false;
 
     const runRecentSync = async () => {
-      const targets = getRecentScheduleMonthTargets({ currentYear, currentMonth, recentPeriodMonths })
+      const targets = recentMonthTargets
         .filter((target) => !isDisplayedStatsMonth(target, currentYear, currentMonth));
       if (targets.length === 0) return;
 

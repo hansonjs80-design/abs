@@ -86,9 +86,13 @@ export function isScheduleVisualViewReady({
   visibleTherapistLoadedKey,
   staffMemosLoadedKey,
   holidaysLoadedKey,
+  shockwaveSettingsLoaded = true,
+  therapistsLoaded = true,
 }) {
   const monthKey = `${Number(year)}-${Number(month)}`;
   return (
+    Boolean(shockwaveSettingsLoaded) &&
+    Boolean(therapistsLoaded) &&
     shockwaveMemosLoadedKey === monthKey &&
     monthlyTherapistLoadedKey === monthKey &&
     doesAdjacentScheduleViewCoverMonth(visibleTherapistLoadedKey, year, month) &&

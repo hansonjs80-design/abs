@@ -225,7 +225,9 @@ export function ScheduleProvider({ children }) {
   const [holidayNames, setHolidayNames] = useState(new Map());
   const [holidaysLoadedKey, setHolidaysLoadedKey] = useState('');
   const [therapists, setTherapists] = useState([]);
+  const [therapistsLoaded, setTherapistsLoaded] = useState(false);
   const [manualTherapists, setManualTherapists] = useState([]);
+  const [shockwaveSettingsLoaded, setShockwaveSettingsLoaded] = useState(false);
   const [shockwaveSettings, setShockwaveSettings] = useState({
     id: '00000000-0000-0000-0000-000000000000',
     start_time: '09:00:00',
@@ -292,6 +294,7 @@ export function ScheduleProvider({ children }) {
   const monthlyTherapistRowsLoadPromisesRef = useRef(new Map());
   const monthlyTherapistSaveRequestRef = useRef({ shockwave: 0, manual_therapy: 0, shinjang_spray: 0 });
   const therapistRosterLoadRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
+  const therapistRosterLoadPromisesRef = useRef({ shockwave: null, manual_therapy: null });
   const therapistRosterSaveRequestRef = useRef({ shockwave: 0, manual_therapy: 0 });
   const therapistRosterSaveQueueRef = useRef({
     shockwave: Promise.resolve(),
@@ -305,11 +308,14 @@ export function ScheduleProvider({ children }) {
   const calendarSlotSettingsLoadRequestRef = useRef(0);
   const calendarSlotSettingsSaveRequestRef = useRef(0);
   const shockwaveSettingsLoadRequestRef = useRef(0);
+  const shockwaveSettingsLoadPromiseRef = useRef(null);
   const shockwaveSettingsSaveRequestRef = useRef(0);
   const loadShockwaveMemosRef = useRef(null);
   const therapistsRef = useRef(therapists);
+  const therapistsLoadedRef = useRef(false);
   const manualTherapistsRef = useRef(manualTherapists);
   const shockwaveSettingsRefCache = useRef(shockwaveSettings);
+  const shockwaveSettingsLoadedRef = useRef(false);
   const monthlyTherapistLoadKeysRef = useRef(monthlyTherapistLoadKeys);
   const monthlyTherapistsByMonthRef = useRef(monthlyTherapistsByMonth);
   const statsSyncPendingRef = useRef(new Map());
@@ -438,10 +444,14 @@ export function ScheduleProvider({ children }) {
           : (entry.fallbackMemos || {});
         const activeShockwaveTherapists = therapistsRef.current || [];
         const activeManualTherapists = manualTherapistsRef.current || [];
-        const monthShockwaveTherapists = monthlyTherapistsByMonthRef.current.shockwave?.[monthKey]
-          ?? (isActiveMonth ? monthlyTherapistsRef.current : []);
-        const monthManualTherapists = monthlyTherapistsByMonthRef.current.manual_therapy?.[monthKey]
-          ?? (isActiveMonth ? monthlyManualTherapistsRef.current : []);
+        const cachedMonthShockwave = monthlyTherapistsByMonthRef.current.shockwave?.[monthKey];
+        const cachedMonthManual = monthlyTherapistsByMonthRef.current.manual_therapy?.[monthKey];
+        const monthShockwaveTherapists = Array.isArray(cachedMonthShockwave) && cachedMonthShockwave.length > 0
+          ? cachedMonthShockwave
+          : (isActiveMonth ? monthlyTherapistsRef.current : []);
+        const monthManualTherapists = Array.isArray(cachedMonthManual) && cachedMonthManual.length > 0
+          ? cachedMonthManual
+          : (isActiveMonth ? monthlyManualTherapistsRef.current : []);
         const liveSettings = shockwaveSettingsRefCache.current;
 
         for (const targetDateStr of datesToSync) {
@@ -1164,30 +1174,47 @@ export function ScheduleProvider({ children }) {
     if (!options.force && therapistsRef.current && therapistsRef.current.length > 0) {
       return therapistsRef.current;
     }
+    if (!options.force && therapistRosterLoadPromisesRef.current.shockwave) {
+      return therapistRosterLoadPromisesRef.current.shockwave;
+    }
     const requestId = (therapistRosterLoadRequestRef.current.shockwave || 0) + 1;
     therapistRosterLoadRequestRef.current.shockwave = requestId;
-    try {
-      const { data, error } = await withScheduleQueryTimeout(
-        supabase
-          .from('shockwave_therapists')
-          .select('*')
-          .eq('is_active', true)
-          .order('slot_index'),
-        'shockwave_therapists'
-      );
+    const loadPromise = (async () => {
+      try {
+        const { data, error } = await withScheduleQueryTimeout(
+          supabase
+            .from('shockwave_therapists')
+            .select('*')
+            .eq('is_active', true)
+            .order('slot_index'),
+          'shockwave_therapists'
+        );
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const result = data || [];
-      if (therapistRosterLoadRequestRef.current.shockwave === requestId) {
-        therapistsRef.current = result;
-        setTherapists(result);
+        const result = data || [];
+        if (therapistRosterLoadRequestRef.current.shockwave === requestId) {
+          therapistsRef.current = result;
+          therapistsLoadedRef.current = true;
+          setTherapists(result);
+          setTherapistsLoaded(true);
+        }
+        return result;
+      } catch (err) {
+        console.error('[ScheduleContext] loadTherapists 실패:', err);
+        if (!therapistsLoadedRef.current) {
+          therapistsLoadedRef.current = true;
+          setTherapistsLoaded(true);
+        }
+        return therapistsRef.current || [];
+      } finally {
+        if (therapistRosterLoadPromisesRef.current.shockwave === loadPromise) {
+          therapistRosterLoadPromisesRef.current.shockwave = null;
+        }
       }
-      return result;
-    } catch (err) {
-      console.error('[ScheduleContext] loadTherapists 실패:', err);
-      return therapistsRef.current || [];
-    }
+    })();
+    therapistRosterLoadPromisesRef.current.shockwave = loadPromise;
+    return loadPromise;
   }, []);
 
   const loadManualTherapists = useCallback(async (options = {}) => {
@@ -1195,36 +1222,48 @@ export function ScheduleProvider({ children }) {
     if (!options.force && manualTherapistsRef.current && manualTherapistsRef.current.length > 0) {
       return manualTherapistsRef.current;
     }
+    if (!options.force && therapistRosterLoadPromisesRef.current.manual_therapy) {
+      return therapistRosterLoadPromisesRef.current.manual_therapy;
+    }
     const requestId = (therapistRosterLoadRequestRef.current.manual_therapy || 0) + 1;
     therapistRosterLoadRequestRef.current.manual_therapy = requestId;
-    try {
-      const { data, error } = await withScheduleQueryTimeout(
-        supabase
-          .from('manual_therapy_therapists')
-          .select('*')
-          .eq('is_active', true)
-          .order('slot_index'),
-        'manual_therapy_therapists'
-      );
+    const loadPromise = (async () => {
+      try {
+        const { data, error } = await withScheduleQueryTimeout(
+          supabase
+            .from('manual_therapy_therapists')
+            .select('*')
+            .eq('is_active', true)
+            .order('slot_index'),
+          'manual_therapy_therapists'
+        );
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const result = data || [];
-      if (therapistRosterLoadRequestRef.current.manual_therapy === requestId) {
-        manualTherapistsRef.current = result;
-        setManualTherapists(result);
+        const result = data || [];
+        if (therapistRosterLoadRequestRef.current.manual_therapy === requestId) {
+          manualTherapistsRef.current = result;
+          setManualTherapists(result);
+        }
+        return result;
+      } catch (err) {
+        console.error('[ScheduleContext] loadManualTherapists 실패:', err);
+        return manualTherapistsRef.current || [];
+      } finally {
+        if (therapistRosterLoadPromisesRef.current.manual_therapy === loadPromise) {
+          therapistRosterLoadPromisesRef.current.manual_therapy = null;
+        }
       }
-      return result;
-    } catch (err) {
-      console.error('[ScheduleContext] loadManualTherapists 실패:', err);
-      return manualTherapistsRef.current || [];
-    }
+    })();
+    therapistRosterLoadPromisesRef.current.manual_therapy = loadPromise;
+    return loadPromise;
   }, []);
 
   const saveTherapistRoster = useCallback(async (type = 'shockwave', roster = []) => {
     const tableName = type === 'manual_therapy' ? 'manual_therapy_therapists' : 'shockwave_therapists';
     const setter = type === 'manual_therapy' ? setManualTherapists : setTherapists;
     const requestKey = type === 'manual_therapy' ? 'manual_therapy' : 'shockwave';
+    therapistRosterLoadPromisesRef.current[requestKey] = null;
     const requestId = (therapistRosterSaveRequestRef.current[requestKey] || 0) + 1;
     therapistRosterSaveRequestRef.current[requestKey] = requestId;
     const saveTask = async () => {
@@ -1236,8 +1275,13 @@ export function ScheduleProvider({ children }) {
         });
         if (therapistRosterSaveRequestRef.current[requestKey] === requestId) {
           therapistRosterLoadRequestRef.current[requestKey] += 1;
+          therapistRosterLoadPromisesRef.current[requestKey] = null;
           if (type === 'manual_therapy') manualTherapistsRef.current = savedData;
-          else therapistsRef.current = savedData;
+          else {
+            therapistsRef.current = savedData;
+            therapistsLoadedRef.current = true;
+            setTherapistsLoaded(true);
+          }
           setter(savedData);
           if (typeof window !== 'undefined') {
             window.dispatchEvent(new Event('clinic-stats-cache-invalidate'));
@@ -1262,65 +1306,86 @@ export function ScheduleProvider({ children }) {
     if (!options.force && shockwaveSettingsRefCache.current && shockwaveSettingsRefCache.current.id && shockwaveSettingsRefCache.current.id !== '00000000-0000-0000-0000-000000000000') {
       return shockwaveSettingsRefCache.current;
     }
-    const requestId = ++shockwaveSettingsLoadRequestRef.current;
-    try {
-      const { data, error } = await withScheduleQueryTimeout(
-        supabase
-          .from('shockwave_settings')
-          .select('*')
-          .order('updated_at', { ascending: false })
-          .limit(1)
-          .single(),
-        'shockwave_settings'
-      );
-
-      if (error && error.code !== 'PGRST116') throw error; // PGRST116 is empty row
-
-      if (data) {
-        if (shockwaveSettingsLoadRequestRef.current !== requestId) return null;
-        const parsed = applyScheduleDeviceSettings({
-          id: data.id || '00000000-0000-0000-0000-000000000000',
-          start_time: data.start_time?.substring(0, 5) || '09:00',
-          end_time: data.end_time?.substring(0, 5) || '18:00',
-          interval_minutes: data.interval_minutes,
-          time_label_interval_minutes: data.time_label_interval_minutes
-            || data.monthly_settlement_settings?.__schedule_display?.time_label_interval_minutes
-            || data.interval_minutes
-            || 20,
-          day_overrides: data.day_overrides || {},
-          date_overrides: data.date_overrides || {},
-          prescriptions: data.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
-          manual_therapy_prescriptions: data.manual_therapy_prescriptions || ['40분', '60분'],
-          prescription_prices: data.prescription_prices || {
-            'F1.5': 50000,
-            'F/Rdc': 70000,
-            'F/R': 80000,
-          },
-          prescription_colors: data.prescription_colors || {},
-          incentive_percentage: data.incentive_percentage ?? 7,
-          manual_therapy_incentive_percentage: data.manual_therapy_incentive_percentage ?? 0,
-          frozen_columns: data.frozen_columns || 6,
-          staff_schedule_block_rules: data.staff_schedule_block_rules || {},
-          staff_display_rules: getSavedStaffDisplayRules(data),
-          shortcuts: data.shortcuts || {},
-          manual_therapy_shortcuts: data.manual_therapy_shortcuts || {},
-          dose_tags: data.dose_tags || {},
-          manual_therapy_dose_tags: data.manual_therapy_dose_tags || {},
-          duration_minutes: data.duration_minutes || {},
-          manual_therapy_duration_minutes: data.manual_therapy_duration_minutes || {},
-          visit_line_break_prescriptions: data.visit_line_break_prescriptions || [],
-          manual_therapy_visit_line_break_prescriptions: data.manual_therapy_visit_line_break_prescriptions || [],
-          monthly_settlement_settings: data.monthly_settlement_settings || {}
-        });
-        shockwaveSettingsRefCache.current = parsed;
-        setShockwaveSettings(parsed);
-        return data;
-      }
-      return null;
-    } catch (err) {
-      console.error('[ScheduleContext] loadShockwaveSettings 실패:', err);
-      return null;
+    if (!options.force && shockwaveSettingsLoadPromiseRef.current) {
+      return shockwaveSettingsLoadPromiseRef.current;
     }
+    const requestId = ++shockwaveSettingsLoadRequestRef.current;
+    const loadPromise = (async () => {
+      try {
+        const { data, error } = await withScheduleQueryTimeout(
+          supabase
+            .from('shockwave_settings')
+            .select('*')
+            .order('updated_at', { ascending: false })
+            .limit(1)
+            .single(),
+          'shockwave_settings'
+        );
+
+        if (error && error.code !== 'PGRST116') throw error; // PGRST116 is empty row
+
+        if (data) {
+          if (shockwaveSettingsLoadRequestRef.current !== requestId) {
+            return shockwaveSettingsRefCache.current || data;
+          }
+          const parsed = applyScheduleDeviceSettings({
+            id: data.id || '00000000-0000-0000-0000-000000000000',
+            start_time: data.start_time?.substring(0, 5) || '09:00',
+            end_time: data.end_time?.substring(0, 5) || '18:00',
+            interval_minutes: data.interval_minutes,
+            time_label_interval_minutes: data.time_label_interval_minutes
+              || data.monthly_settlement_settings?.__schedule_display?.time_label_interval_minutes
+              || data.interval_minutes
+              || 20,
+            day_overrides: data.day_overrides || {},
+            date_overrides: data.date_overrides || {},
+            prescriptions: data.prescriptions || ['F1.5', 'F/Rdc', 'F/R'],
+            manual_therapy_prescriptions: data.manual_therapy_prescriptions || ['40분', '60분'],
+            prescription_prices: data.prescription_prices || {
+              'F1.5': 50000,
+              'F/Rdc': 70000,
+              'F/R': 80000,
+            },
+            prescription_colors: data.prescription_colors || {},
+            incentive_percentage: data.incentive_percentage ?? 7,
+            manual_therapy_incentive_percentage: data.manual_therapy_incentive_percentage ?? 0,
+            frozen_columns: data.frozen_columns || 6,
+            staff_schedule_block_rules: data.staff_schedule_block_rules || {},
+            staff_display_rules: getSavedStaffDisplayRules(data),
+            shortcuts: data.shortcuts || {},
+            manual_therapy_shortcuts: data.manual_therapy_shortcuts || {},
+            dose_tags: data.dose_tags || {},
+            manual_therapy_dose_tags: data.manual_therapy_dose_tags || {},
+            duration_minutes: data.duration_minutes || {},
+            manual_therapy_duration_minutes: data.manual_therapy_duration_minutes || {},
+            visit_line_break_prescriptions: data.visit_line_break_prescriptions || [],
+            manual_therapy_visit_line_break_prescriptions: data.manual_therapy_visit_line_break_prescriptions || [],
+            monthly_settlement_settings: data.monthly_settlement_settings || {}
+          });
+          shockwaveSettingsRefCache.current = parsed;
+          shockwaveSettingsLoadedRef.current = true;
+          setShockwaveSettings(parsed);
+          setShockwaveSettingsLoaded(true);
+          return data;
+        }
+        shockwaveSettingsLoadedRef.current = true;
+        setShockwaveSettingsLoaded(true);
+        return null;
+      } catch (err) {
+        console.error('[ScheduleContext] loadShockwaveSettings 실패:', err);
+        if (!shockwaveSettingsLoadedRef.current) {
+          shockwaveSettingsLoadedRef.current = true;
+          setShockwaveSettingsLoaded(true);
+        }
+        return null;
+      } finally {
+        if (shockwaveSettingsLoadPromiseRef.current === loadPromise) {
+          shockwaveSettingsLoadPromiseRef.current = null;
+        }
+      }
+    })();
+    shockwaveSettingsLoadPromiseRef.current = loadPromise;
+    return loadPromise;
   }, []);
 
   useEffect(() => {
@@ -1458,6 +1523,7 @@ export function ScheduleProvider({ children }) {
 
   // 충격파 스케줄러 환경설정 저장
   const saveShockwaveSettings = useCallback(async (newSettings) => {
+    shockwaveSettingsLoadPromiseRef.current = null;
     const requestId = ++shockwaveSettingsSaveRequestRef.current;
     const { year: activeYear, month: activeMonth } = currentDateRef.current;
     const currentSettings = shockwaveSettingsRefCache.current;
@@ -1717,7 +1783,9 @@ export function ScheduleProvider({ children }) {
 
         // Ref 캐시도 즉시 갱신
         shockwaveSettingsRefCache.current = updatedSettings;
+        shockwaveSettingsLoadedRef.current = true;
         setShockwaveSettings(updatedSettings);
+        setShockwaveSettingsLoaded(true);
       }
       
       // 설정 저장 완료 후 즉시 서버에서 메모를 강제 리로드하여 로컬 캐시를 동기화
@@ -2143,9 +2211,12 @@ export function ScheduleProvider({ children }) {
 
         const targets = getVisibleShockwaveScheduleMonths(year, month);
         const viewLoadCacheVersion = shockwaveScheduleCacheVersionRef.current;
-        const results = await Promise.allSettled(targets.map((target) => (
-          loadShockwaveRawMonthRows(target, { force: options.force === true })
-        )));
+        const [results] = await Promise.all([
+          Promise.allSettled(targets.map((target) => (
+            loadShockwaveRawMonthRows(target, { force: options.force === true })
+          ))),
+          shockwaveSettingsLoadedRef.current ? Promise.resolve(shockwaveSettingsRefCache.current) : loadShockwaveSettings(),
+        ]);
 
         const isCurrent =
           currentDateRef.current.year === year &&
@@ -2222,7 +2293,7 @@ export function ScheduleProvider({ children }) {
 
     shockwaveMemoViewLoadPromisesRef.current.set(cacheKey, loadPromise);
     return loadPromise;
-  }, [waitForShockwaveWrites, loadShockwaveRawMonthRows, beginLoading, endLoading, buildShockwaveMemoViewSnapshot, persistHiddenMergedScheduleRelocation]);
+  }, [waitForShockwaveWrites, loadShockwaveRawMonthRows, loadShockwaveSettings, beginLoading, endLoading, buildShockwaveMemoViewSnapshot, persistHiddenMergedScheduleRelocation]);
 
   const preloadShockwaveNavigationMonths = useCallback(async (year, month) => {
     const previousMonth = shiftScheduleMonth(year, month, -1);
@@ -3481,10 +3552,10 @@ export function ScheduleProvider({ children }) {
       navigateMonth, goToMonth,
       staffMemos, staffMemosLoadedKey, loadStaffMemos, saveStaffMemo,
       holidays, holidayNames, holidaysLoadedKey, loadHolidays,
-      therapists, loadTherapists,
+      therapists, therapistsLoaded, loadTherapists,
       manualTherapists, loadManualTherapists,
       saveTherapistRoster,
-      shockwaveSettings, loadShockwaveSettings, saveShockwaveSettings, saveShockwaveDeviceScheduleSettings,
+      shockwaveSettings, shockwaveSettingsLoaded, loadShockwaveSettings, saveShockwaveSettings, saveShockwaveDeviceScheduleSettings,
       shockwaveMemos, shockwaveMemosLoadedKey, loadShockwaveMemos, preloadShockwaveNavigationMonths, saveShockwaveMemo, saveShockwaveMemosBulk,
       monthlyTherapists, monthlyManualTherapists, monthlyShinjangSprayTherapists, monthlyTherapistsByMonth, monthlyTherapistLoadKeys, monthlyTherapistVisibleLoadKeys, loadMonthlyTherapists, loadVisibleMonthlyTherapists, saveMonthlyTherapists,
       notices, loadNotices, saveNotice,

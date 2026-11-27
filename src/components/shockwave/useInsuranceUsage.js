@@ -5,21 +5,45 @@ import {
   buildInsuranceRecords, getInsurancePatient, getInsuranceUsage,
   localInsuranceScheduleRows, overlayInsuranceHistorySchedules,
 } from '../../lib/insuranceUsageUtils';
-import { getExplicitVisitSuffix } from '../../lib/schedulerCellTextUtils';
 
 const INSURANCE_CACHE_TTL_MS = 5 * 60 * 1000;
 const INSURANCE_ERROR_CACHE_TTL_MS = 15 * 1000;
+const HOVER_LOAD_DEBOUNCE_MS = 65;
 
-export default function useInsuranceUsage({ logs, hoverRow, memos, year, month, settings, historyRevision = 0 }) {
-  const patientsKey = JSON.stringify([...new Set([...logs, hoverRow].filter(Boolean)
-    .map((row) => getInsurancePatient(row).key).filter(Boolean))].sort());
-  const prefetchKey = JSON.stringify([...new Set(Object.values(memos || {})
-    // Empty/future cells cannot have a usage value yet. Prioritize cells whose
-    // visit mark can actually show insurance usage when the cursor reaches them.
-    .filter((row) => Boolean(getExplicitVisitSuffix(row?.content || '')))
-    .map((row) => getInsurancePatient(row).key).filter(Boolean))].sort());
-  const historyPatientsKey = JSON.stringify([...new Set(logs.map((row) => getInsurancePatient(row).key).filter(Boolean))].sort());
+export default function useInsuranceUsage({
+  logs,
+  hoverRow,
+  pendingPatientRow = null,
+  memos,
+  year,
+  month,
+  settings,
+  historyRevision = 0,
+}) {
+  const hoverPatientKey = useMemo(
+    () => (hoverRow ? getInsurancePatient(hoverRow).key : ''),
+    [hoverRow]
+  );
+  const historyPatientsKey = useMemo(() => JSON.stringify([...new Set(
+    [...logs, pendingPatientRow]
+      .filter(Boolean)
+      .map((row) => getInsurancePatient(row).key)
+      .filter(Boolean)
+  )].sort()), [logs, pendingPatientRow]);
   const historyPatients = useMemo(() => new Set(JSON.parse(historyPatientsKey)), [historyPatientsKey]);
+  const patientsKey = useMemo(() => JSON.stringify([...new Set(
+    [...historyPatients, hoverPatientKey].filter(Boolean)
+  )].sort()), [historyPatients, hoverPatientKey]);
+  const localRowsByPatient = useMemo(() => {
+    const grouped = new Map();
+    localInsuranceScheduleRows(memos, year, month).forEach((row) => {
+      const pKey = getInsurancePatient(row).key;
+      if (!pKey) return;
+      if (!grouped.has(pKey)) grouped.set(pKey, []);
+      grouped.get(pKey).push(row);
+    });
+    return grouped;
+  }, [memos, year, month]);
   const [loaded, setLoaded] = useState({});
   const cacheRef = useRef(new Map());
   const pendingRef = useRef(new Map());
@@ -60,20 +84,23 @@ export default function useInsuranceUsage({ logs, hoverRow, memos, year, month, 
     return promise.then(publishResult);
   }, []);
   useEffect(() => {
-    JSON.parse(patientsKey).forEach((key) => loadPatient(key, { freshness: historyPatients.has(key) ? historyRevision : 0 }));
-  }, [patientsKey, loadPatient, historyPatients, historyRevision]);
+    historyPatients.forEach((key) => {
+      loadPatient(key, { freshness: historyRevision });
+    });
+  }, [historyPatients, historyRevision, loadPatient]);
   useEffect(() => {
-    let active = true;
-    const queue = JSON.parse(prefetchKey);
-    const worker = async () => {
-      while (active && queue.length) await loadPatient(queue.shift(), { publish: false });
-    };
-    // Keep prefetch invisible to interaction: it populates only the cache, while
-    // a hovered patient publishes its result immediately. Starting after the
-    // first paint also avoids competing with the initial scheduler render.
-    const timer = setTimeout(() => { worker(); worker(); }, 80);
-    return () => { active = false; clearTimeout(timer); };
-  }, [prefetchKey, loadPatient]);
+    if (!hoverPatientKey || historyPatients.has(hoverPatientKey)) return undefined;
+    const cached = cacheRef.current.get(hoverPatientKey);
+    const cacheTtl = cached?.error ? INSURANCE_ERROR_CACHE_TTL_MS : INSURANCE_CACHE_TTL_MS;
+    if (cached && Date.now() - cached.time < cacheTtl) {
+      loadPatient(hoverPatientKey, { freshness: 0 });
+      return undefined;
+    }
+    const timer = setTimeout(() => {
+      loadPatient(hoverPatientKey, { freshness: 0 });
+    }, HOVER_LOAD_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [hoverPatientKey, historyPatients, loadPatient]);
   const records = useMemo(() => {
     const keys = JSON.parse(patientsKey);
     if (!keys.length) return [];
@@ -94,15 +121,16 @@ export default function useInsuranceUsage({ logs, hoverRow, memos, year, month, 
       }
       return loaded[key]?.data?.historyLogs || [];
     });
+    const matchedLocalRows = keys.flatMap((key) => localRowsByPatient.get(key) || []);
     return buildInsuranceRecords({
       scheduleRows: overlayInsuranceHistorySchedules(
         keys.flatMap((key) => loaded[key]?.data?.scheduleRows || []),
         logs,
-        localInsuranceScheduleRows(memos, year, month)
+        matchedLocalRows
       ).filter((row) => patients.has(getInsurancePatient(row).key)),
       historyLogs, settings,
     });
-  }, [loaded, patientsKey, memos, year, month, settings, logs]);
+  }, [loaded, patientsKey, localRowsByPatient, settings, logs]);
   const getStatus = useCallback((row) => {
     let key = getInsurancePatient(row).key;
     if (!key) {

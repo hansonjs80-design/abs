@@ -71,9 +71,11 @@ export default function ShockwaveStatsPage() {
     loadTherapists();
   }, [loadTherapists]);
 
-  const reloadScheduleData = useCallback(async ({ force = false } = {}) => {
+  const reloadScheduleData = useCallback(async ({ force = false, silent = false } = {}) => {
     const requestId = ++scheduleReloadRequestRef.current;
-    setIsScheduleLoading(true);
+    if (!silent) {
+      setIsScheduleLoading(true);
+    }
     try {
       const [therapistsResult, memosResult] = await Promise.allSettled([
         loadMonthlyTherapists(currentYear, currentMonth, 'shockwave'),
@@ -161,7 +163,7 @@ export default function ShockwaveStatsPage() {
         const now = Date.now();
         if (now - lastVisibilityRefreshAtRef.current < 30000) return;
         lastVisibilityRefreshAtRef.current = now;
-        reloadScheduleData({ force: false });
+        reloadScheduleData({ force: false, silent: true });
       }
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);

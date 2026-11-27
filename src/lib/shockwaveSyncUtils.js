@@ -568,6 +568,73 @@ export async function syncTodayShockwaveScheduleToStats(params) {
   return run;
 }
 
+export function collectCompletedShockwaveScheduleRowsForMonth({
+  year,
+  month,
+  memos,
+  therapists,
+  monthlyTherapists,
+  settings = {},
+  upToToday = false,
+} = {}) {
+  if (!memos) return [];
+
+  const today = getTodayKST();
+  const daysInMonth = new Date(year, month, 0).getDate();
+  let endDay = daysInMonth;
+  if (upToToday && Number(year) === today.getFullYear() && Number(month) === today.getMonth() + 1) {
+    endDay = today.getDate();
+  }
+
+  const weeks = generateShockwaveCalendar(year, month);
+  const renderedRowCount = getShockwaveScheduleBaseRowCount(settings, year, month);
+  const renderedColCount = getStatsTherapistColumnCount(therapists, monthlyTherapists);
+  const monthPadded = String(month).padStart(2, '0');
+  const collected = [];
+
+  getVisibleShockwaveScheduleMemoEntriesForStats(memos, {
+    rowCount: renderedRowCount,
+    colCount: renderedColCount,
+  }).forEach(([key, cell]) => {
+    const [w, d, r, c] = key.split('-').map(Number);
+    const dayInfo = weeks[w]?.[d];
+    if (!dayInfo || !dayInfo.isCurrentMonth) return;
+    if (dayInfo.day < 1 || dayInfo.day > endDay) return;
+    if (String(cell?.bg_color || '').toLowerCase() !== TREATMENT_COMPLETE_BG.toLowerCase()) return;
+
+    const treatmentGroup = getScheduleItemTreatmentGroup(cell, settings, year, month);
+    if (treatmentGroup === 'manual_therapy') return;
+
+    const parsed = parseTherapyInfo(cell?.content, {
+      allowManualDuration: treatmentGroup === 'shinjang_spray',
+    });
+    if (!parsed) return;
+
+    const therapistName = resolveTherapistName(c, dayInfo.day, therapists, monthlyTherapists);
+    const prescription = cell?.prescription || get4060PrescriptionFromContent(cell?.content) || '';
+    collected.push({
+      day: dayInfo.day,
+      r,
+      c,
+      row: {
+        scheduler_cell_key: buildSchedulerCellKey(year, month, w, d, r, c),
+        date: `${year}-${monthPadded}-${String(dayInfo.day).padStart(2, '0')}`,
+        patient_name: parsed.patient_name,
+        chart_number: parsed.chart_number || '',
+        visit_count: parsed.visit_count || '1',
+        body_part: cell?.body_part || parsed.body_part || '',
+        therapist_name: therapistName,
+        prescription,
+        prescription_count: resolveShockwaveSchedulePrescriptionCount({ prescription }),
+        source: 'scheduler',
+      },
+    });
+  });
+
+  collected.sort((a, b) => (a.day - b.day) || (a.r - b.r) || (a.c - b.c));
+  return collected.map((entry) => entry.row);
+}
+
 export async function syncMonthShockwaveScheduleToStats({
   year,
   month,

@@ -845,7 +845,7 @@ export default function CArmStatsPage() {
   if (!result || result.year !== year) return <div className="c-arm-stats" role="status">C-Arm 기록을 불러오는 중…</div>;
   return <>
     {holidayError && <p role="alert" className="c-arm-error">공휴일 설정을 불러오지 못했습니다. 다시 불러오기를 눌러주세요.</p>}
-    <CArmMonthEditor holidays={holidays} holidayNames={holidayNames} key={`${year}-${month}-${request}`} year={year} month={month} records={result.records} template={result.template} userId={user.id}
+    <CArmMonthEditor holidays={holidays} holidayNames={holidayNames} key={`${year}-${month}-${request}`} year={year} month={month} records={result.records} template={result.template} userId={user?.id || user?.username || 'anon'}
     onReload={() => {
       clearCArmCache();
       setRequest((value) => value + 1);

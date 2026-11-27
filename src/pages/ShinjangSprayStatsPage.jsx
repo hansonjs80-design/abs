@@ -412,15 +412,21 @@ export default function ShinjangSprayStatsPage() {
     const therapistKey = shockwaveTherapistRoster
       .map((t, idx) => `${t?.slot_index ?? idx}:${t?.name || ''}`)
       .join('|');
-    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}`;
+    const manualTherapistKey = manualTherapistRoster
+      .map((t, idx) => `${t?.slot_index ?? idx}:${t?.name || ''}`)
+      .join('|');
+    const currentMonthlyShinjangKey = (Array.isArray(monthlyShinjangSprayTherapists) ? monthlyShinjangSprayTherapists : [])
+      .map((t) => `${t?.slot_index ?? ''}:${t?.therapist_name || ''}:${t?.start_day ?? ''}:${t?.end_day ?? ''}`)
+      .join('|');
+    const syncKey = `${currentYear}-${currentMonth}:${recentPeriodMonths}:${therapistKey}:${manualTherapistKey}:${currentMonthlyShinjangKey}`;
 
     const cachedRecent = shinjangRecentCache.get(recentCacheKey);
     if (cachedRecent) {
       setRecentShockwaveLogs(cachedRecent.shockwaveLogs || []);
       setRecentManualLogs(cachedRecent.manualLogs || []);
       setRecentMonthlyTherapistsByMonth({
-        [currentMonthKey]: monthlyShinjangSprayTherapists,
         ...(cachedRecent.monthlyTherapistsByMonth || {}),
+        [currentMonthKey]: monthlyShinjangSprayTherapists,
       });
       setIsRecentLogsLoading(false);
       if (cachedRecent.syncKey === syncKey) {
@@ -476,8 +482,8 @@ export default function ShinjangSprayStatsPage() {
       setRecentShockwaveLogs(nextShockwaveLogs);
       setRecentManualLogs(nextManualLogs);
       setRecentMonthlyTherapistsByMonth({
-        [currentMonthKey]: monthlyShinjangSprayTherapists,
         ...monthlyTherapistsMap,
+        [currentMonthKey]: monthlyShinjangSprayTherapists,
       });
 
       // 즉시 결산/신환 현황 스켈레톤 해제 및 즉각 렌더링

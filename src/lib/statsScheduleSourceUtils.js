@@ -229,34 +229,96 @@ export function buildScheduleMemoMapForStats(rows, { year, month, settings = {} 
 }
 
 const STATS_SCHEDULE_SELECT_FIELDS = 'id,year,month,week_index,day_index,row_index,col_index,content,bg_color,body_part,prescription,merge_span,updated_at';
+const STATS_SOURCE_CACHE_TTL_MS = 3 * 60 * 1000;
+const rawScheduleRowsCache = new Map();
+const rawScheduleRowsInFlight = new Map();
+const prefetchedMonthlyTherapistsCache = new Map();
+const prefetchedMonthlyTherapistsInFlight = new Map();
 
-async function fetchShockwaveScheduleRowsForStorageMonth({ year, month }) {
-  const rows = [];
-  let page = 0;
-  let hasMore = true;
-
-  while (hasMore) {
-    const { data, error } = await withScheduleStatsQueryTimeout(
-      supabase
-        .from('shockwave_schedules')
-        .select(STATS_SCHEDULE_SELECT_FIELDS)
-        .eq('year', year)
-        .eq('month', month)
-        .range(page * 1000, (page + 1) * 1000 - 1),
-      `shockwave_schedules stats source ${year}-${month} page ${page + 1}`
-    );
-
-    if (error) throw error;
-    if (Array.isArray(data)) rows.push(...data);
-    hasMore = Array.isArray(data) && data.length >= 1000;
-    page += 1;
-  }
-
-  return rows;
+export function clearStatsScheduleSourceCache() {
+  rawScheduleRowsCache.clear();
+  rawScheduleRowsInFlight.clear();
+  prefetchedMonthlyTherapistsCache.clear();
+  prefetchedMonthlyTherapistsInFlight.clear();
 }
 
-export async function loadScheduleMemosForStatsMonth({ year, month, settings = {} }) {
-  const rows = await fetchShockwaveScheduleRowsForStorageMonth({ year, month });
+if (typeof window !== 'undefined') {
+  window.addEventListener('clinic-stats-updated', clearStatsScheduleSourceCache);
+  window.addEventListener('clinic-stats-cache-invalidate', clearStatsScheduleSourceCache);
+}
+
+async function fetchShockwaveScheduleRowsForStorageMonth({
+  year,
+  month,
+  force = false,
+  useSharedCache = typeof window !== 'undefined',
+}) {
+  const cacheKey = `${Number(year)}-${Number(month)}`;
+  if (useSharedCache && !force) {
+    const cached = rawScheduleRowsCache.get(cacheKey);
+    if (cached && Date.now() - cached.updatedAt <= STATS_SOURCE_CACHE_TTL_MS) {
+      return cached.rows;
+    }
+    const inFlight = rawScheduleRowsInFlight.get(cacheKey);
+    if (inFlight) return inFlight;
+  }
+
+  const loadPromise = (async () => {
+    const rows = [];
+    let page = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await withScheduleStatsQueryTimeout(
+        supabase
+          .from('shockwave_schedules')
+          .select(STATS_SCHEDULE_SELECT_FIELDS)
+          .eq('year', year)
+          .eq('month', month)
+          .range(page * 1000, (page + 1) * 1000 - 1),
+        `shockwave_schedules stats source ${year}-${month} page ${page + 1}`
+      );
+
+      if (error) throw error;
+      if (Array.isArray(data)) rows.push(...data);
+      hasMore = Array.isArray(data) && data.length >= 1000;
+      page += 1;
+    }
+
+    if (useSharedCache) {
+      rawScheduleRowsCache.set(cacheKey, { rows, updatedAt: Date.now() });
+    }
+    return rows;
+  })();
+
+  if (useSharedCache) {
+    rawScheduleRowsInFlight.set(cacheKey, loadPromise);
+    loadPromise.finally(() => {
+      if (rawScheduleRowsInFlight.get(cacheKey) === loadPromise) {
+        rawScheduleRowsInFlight.delete(cacheKey);
+      }
+    }).catch(() => {});
+  }
+
+  return loadPromise;
+}
+
+export async function prefetchScheduleRowsForStatsMonth({
+  year,
+  month,
+  force = false,
+  useSharedCache = typeof window !== 'undefined',
+} = {}) {
+  return fetchShockwaveScheduleRowsForStorageMonth({
+    year,
+    month,
+    force,
+    useSharedCache,
+  });
+}
+
+export async function loadScheduleMemosForStatsMonth({ year, month, settings = {}, force = false }) {
+  const rows = await fetchShockwaveScheduleRowsForStorageMonth({ year, month, force });
 
   return buildScheduleMemoMapForStats(rows, { year, month, settings });
 }
@@ -373,32 +435,69 @@ export async function prefetchStatsMonthlyTherapists({
   minYear,
   rosterQueryCache,
   supabaseClient = supabase,
+  force = false,
+  useSharedCache = typeof window !== 'undefined' && supabaseClient === supabase,
 } = {}) {
   if (!rosterQueryCache) return null;
-  if (rosterQueryCache.has(PREFETCHED_MONTHLY_THERAPISTS_CACHE_KEY)) {
+  if (!force && rosterQueryCache.has(PREFETCHED_MONTHLY_THERAPISTS_CACHE_KEY)) {
     return rosterQueryCache.get(PREFETCHED_MONTHLY_THERAPISTS_CACHE_KEY);
   }
   const startYear = Math.max(2020, (Number(minYear) || new Date().getFullYear()) - 1);
-  try {
-    const { data, error } = await withScheduleStatsQueryTimeout(
-      supabaseClient
-        .from('shockwave_monthly_therapists')
-        .select('year,month,type,slot_index,therapist_name,start_day,end_day')
-        .gte('year', startYear)
-        .order('year', { ascending: false })
-        .order('month', { ascending: false })
-        .order('slot_index')
-        .order('start_day'),
-      `shockwave_monthly_therapists stats prefetch >= ${startYear}`
-    );
-    if (error) throw error;
-    const rows = Array.isArray(data) ? data : [];
-    rosterQueryCache.set(PREFETCHED_MONTHLY_THERAPISTS_CACHE_KEY, rows);
-    return rows;
-  } catch (error) {
-    console.warn('[statsScheduleSourceUtils] 월별 치료사 일괄 프리패치 실패, 개별 조회로 폴백:', error);
-    return null;
+  if (useSharedCache && !force) {
+    const cached = prefetchedMonthlyTherapistsCache.get(startYear);
+    if (cached && Date.now() - cached.updatedAt <= STATS_SOURCE_CACHE_TTL_MS) {
+      rosterQueryCache.set(PREFETCHED_MONTHLY_THERAPISTS_CACHE_KEY, cached.rows);
+      return cached.rows;
+    }
+    const inFlight = prefetchedMonthlyTherapistsInFlight.get(startYear);
+    if (inFlight) {
+      const rows = await inFlight;
+      if (Array.isArray(rows)) {
+        rosterQueryCache.set(PREFETCHED_MONTHLY_THERAPISTS_CACHE_KEY, rows);
+      }
+      return rows;
+    }
   }
+
+  const loadPromise = (async () => {
+    try {
+      const { data, error } = await withScheduleStatsQueryTimeout(
+        supabaseClient
+          .from('shockwave_monthly_therapists')
+          .select('year,month,type,slot_index,therapist_name,start_day,end_day')
+          .gte('year', startYear)
+          .order('year', { ascending: false })
+          .order('month', { ascending: false })
+          .order('slot_index')
+          .order('start_day'),
+        `shockwave_monthly_therapists stats prefetch >= ${startYear}`
+      );
+      if (error) throw error;
+      const rows = Array.isArray(data) ? data : [];
+      if (useSharedCache) {
+        prefetchedMonthlyTherapistsCache.set(startYear, { rows, updatedAt: Date.now() });
+      }
+      return rows;
+    } catch (error) {
+      console.warn('[statsScheduleSourceUtils] 월별 치료사 일괄 프리패치 실패, 개별 조회로 폴백:', error);
+      return null;
+    }
+  })();
+
+  if (useSharedCache) {
+    prefetchedMonthlyTherapistsInFlight.set(startYear, loadPromise);
+    loadPromise.finally(() => {
+      if (prefetchedMonthlyTherapistsInFlight.get(startYear) === loadPromise) {
+        prefetchedMonthlyTherapistsInFlight.delete(startYear);
+      }
+    });
+  }
+
+  const rows = await loadPromise;
+  if (Array.isArray(rows)) {
+    rosterQueryCache.set(PREFETCHED_MONTHLY_THERAPISTS_CACHE_KEY, rows);
+  }
+  return rows;
 }
 
 export async function loadStatsMonthlyTherapists({
