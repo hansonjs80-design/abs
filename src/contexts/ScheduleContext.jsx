@@ -45,6 +45,7 @@ import {
   readPendingScheduleDrafts,
   rememberDeletedScheduleDraft,
   removeDeletedScheduleDraft,
+  shockwaveScheduleScrollMemory,
   wasScheduleDraftDeletedAfter,
 } from '../lib/schedulerUtils';
 import { saveMonthlyTherapistConfigs } from '../lib/monthlyTherapistPersistence';
@@ -1194,6 +1195,7 @@ export function ScheduleProvider({ children }) {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('clinic-before-route-change'));
     }
+    shockwaveScheduleScrollMemory.clear();
     loadCacheRef.current = { staffMemos: null, shockwaveMemos: null, holidays: null };
     lastKnownScheduleServerUpdatedAtRef.current = null;
     lastWriteTimeRef.current.clear();
@@ -1213,6 +1215,7 @@ export function ScheduleProvider({ children }) {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('clinic-before-route-change'));
     }
+    shockwaveScheduleScrollMemory.clear();
     loadCacheRef.current = { staffMemos: null, shockwaveMemos: null, holidays: null };
     lastKnownScheduleServerUpdatedAtRef.current = null;
     lastWriteTimeRef.current.clear();

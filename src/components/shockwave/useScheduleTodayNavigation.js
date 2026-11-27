@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { isSameDate } from '../../lib/calendarUtils';
 import { getScheduleShortcutKey, isMetaEvent } from '../../lib/scheduleKeyboardUtils';
 import {
@@ -10,11 +10,42 @@ import {
 import { shockwaveScheduleScrollMemory } from '../../lib/schedulerUtils';
 
 const WEEK_WHEEL_TARGET_RESET_MS = 800;
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+const getAncestorTransformOffsetY = (el) => {
+  if (!el || typeof window === 'undefined' || typeof window.getComputedStyle !== 'function') {
+    return 0;
+  }
+  let offsetY = 0;
+  let current = el;
+  while (current && current !== document.body && current !== document.documentElement) {
+    const transform = window.getComputedStyle(current)?.transform;
+    if (transform && transform !== 'none') {
+      const matrixMatch = transform.match(/^matrix\(([^)]+)\)$/);
+      if (matrixMatch) {
+        const values = matrixMatch[1].split(',').map((part) => Number(part.trim()));
+        if (Number.isFinite(values[5])) {
+          offsetY += values[5];
+        }
+      } else {
+        const matrix3dMatch = transform.match(/^matrix3d\(([^)]+)\)$/);
+        if (matrix3dMatch) {
+          const values = matrix3dMatch[1].split(',').map((part) => Number(part.trim()));
+          if (Number.isFinite(values[13])) {
+            offsetY += values[13];
+          }
+        }
+      }
+    }
+    current = current.parentElement;
+  }
+  return offsetY;
+};
 
 const getWeekTop = (weekEl) => {
   if (!weekEl || typeof window === 'undefined') return 0;
   const rect = weekEl.getBoundingClientRect();
-  return rect.top + (window.scrollY || window.pageYOffset || 0);
+  return rect.top + (window.scrollY || window.pageYOffset || 0) - getAncestorTransformOffsetY(weekEl);
 };
 
 export default function useScheduleTodayNavigation({
@@ -73,10 +104,13 @@ export default function useScheduleTodayNavigation({
     && !Number.isNaN(targetDate.getTime())
     && currentYear === targetDate.getFullYear()
     && currentMonth === targetDate.getMonth() + 1;
-  const targetWeekIdx = useMemo(
-    () => (isTargetScheduleMonth ? getScheduleWeekIndexForDate(weeks, targetDate) : -1),
-    [isTargetScheduleMonth, targetDate, weeks]
-  );
+  const targetWeekIdx = useMemo(() => {
+    if (!isTargetScheduleMonth) return -1;
+    const exactWeekIdx = getScheduleWeekIndexForDate(weeks, targetDate);
+    if (exactWeekIdx >= 0) return exactWeekIdx;
+    if (isSameDate(targetDate, today)) return todayWeekIdx;
+    return -1;
+  }, [isTargetScheduleMonth, targetDate, today, todayWeekIdx, weeks]);
 
   const scrollToTargetDateWeek = useCallback((instant = false) => {
     if (targetWeekIdx < 0 || typeof window === 'undefined') return false;
@@ -122,13 +156,16 @@ export default function useScheduleTodayNavigation({
     scrollToAdjacentVisibleWeek(1);
   }, [scrollToAdjacentVisibleWeek]);
 
+  const scheduleScrollKeyRef = useRef(scheduleScrollKey);
+  scheduleScrollKeyRef.current = scheduleScrollKey;
+
   const saveScheduleScrollPosition = useCallback(() => {
-    if (typeof window === 'undefined') return;
-    shockwaveScheduleScrollMemory.set(scheduleScrollKey, {
+    if (typeof window === 'undefined' || !scheduleScrollKeyRef.current) return;
+    shockwaveScheduleScrollMemory.set(scheduleScrollKeyRef.current, {
       x: window.scrollX || window.pageXOffset || 0,
       y: window.scrollY || window.pageYOffset || 0,
     });
-  }, [scheduleScrollKey]);
+  }, []);
 
   useEffect(() => {
     window.addEventListener('clinic-before-route-change', saveScheduleScrollPosition);
@@ -230,100 +267,120 @@ export default function useScheduleTodayNavigation({
     };
   }, [scrollToAdjacentVisibleWeek]);
 
-  const initialScrollDoneRef = useRef(false);
-  const skipNextMonthAutoScrollRef = useRef(false);
+  const alignedScrollKeyRef = useRef('');
 
-  useEffect(() => {
-    initialScrollDoneRef.current = false;
-  }, [scheduleScrollKey]);
-
-  useEffect(() => {
+  useIsomorphicLayoutEffect(() => {
     if (!targetDate || !isInitialScrollReady || targetWeekIdx < 0) return undefined;
 
+    const shouldScrollInstantly = alignedScrollKeyRef.current !== scheduleScrollKey;
+    if (scrollToTargetDateWeek(shouldScrollInstantly)) {
+      alignedScrollKeyRef.current = scheduleScrollKey;
+      onTargetDateScrolled?.();
+      return undefined;
+    }
+
+    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+      return undefined;
+    }
+
     let retryCount = 0;
-    let timer = null;
-    const tryTargetScroll = () => {
-      if (scrollToTargetDateWeek()) {
-        initialScrollDoneRef.current = true;
-        skipNextMonthAutoScrollRef.current = true;
+    let rafId = null;
+    const retryTargetScroll = () => {
+      if (scrollToTargetDateWeek(shouldScrollInstantly)) {
+        alignedScrollKeyRef.current = scheduleScrollKey;
         onTargetDateScrolled?.();
         return;
       }
       if (retryCount < 5) {
         retryCount += 1;
-        timer = setTimeout(tryTargetScroll, 80);
+        rafId = window.requestAnimationFrame(retryTargetScroll);
       }
     };
 
-    timer = setTimeout(tryTargetScroll, 50);
+    rafId = window.requestAnimationFrame(retryTargetScroll);
     return () => {
-      if (timer) clearTimeout(timer);
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
     };
   }, [
     isInitialScrollReady,
     onTargetDateScrolled,
+    scheduleScrollKey,
     scrollToTargetDateWeek,
     targetDate,
     targetWeekIdx,
   ]);
 
-  useEffect(() => {
-    if (targetDate || initialScrollDoneRef.current || !isInitialScrollReady) return undefined;
+  useIsomorphicLayoutEffect(() => {
+    const hasActiveTargetScroll = Boolean(targetDate && targetWeekIdx >= 0);
+    if (hasActiveTargetScroll || alignedScrollKeyRef.current === scheduleScrollKey) return undefined;
+
+    if (!isInitialScrollReady) {
+      if (typeof window !== 'undefined' && !shockwaveScheduleScrollMemory.has(scheduleScrollKey)) {
+        window.scrollTo({
+          top: 0,
+          left: window.scrollX || window.pageXOffset || 0,
+          behavior: 'instant',
+        });
+      }
+      return undefined;
+    }
+
+    const alignMonthScroll = () => {
+      if (shouldAutoScrollToToday) {
+        if (!scrollToTodayWeek(true)) return false;
+        alignedScrollKeyRef.current = scheduleScrollKey;
+        return true;
+      }
+
+      const savedPosition = shockwaveScheduleScrollMemory.get(scheduleScrollKey);
+      if (savedPosition && typeof window !== 'undefined') {
+        window.scrollTo({
+          top: savedPosition.y || 0,
+          left: savedPosition.x || 0,
+          behavior: 'instant',
+        });
+        alignedScrollKeyRef.current = scheduleScrollKey;
+        return true;
+      }
+
+      const firstWeekEl = weekRefs.current[0];
+      if (!firstWeekEl || !scrollToWeek(firstWeekEl, 'instant')) return false;
+      alignedScrollKeyRef.current = scheduleScrollKey;
+      return true;
+    };
+
+    if (alignMonthScroll()) {
+      return undefined;
+    }
+
+    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+      return undefined;
+    }
 
     let retryCount = 0;
-    let timer = null;
-    const tryInitialScroll = () => {
-      if (shouldAutoScrollToToday) {
-        if (!scrollToTodayWeek(true) && retryCount < 5) {
-          retryCount += 1;
-          timer = setTimeout(tryInitialScroll, 80);
-          return;
-        }
-      } else {
-        const savedPosition = shockwaveScheduleScrollMemory.get(scheduleScrollKey);
-        if (savedPosition) {
-          window.scrollTo(savedPosition.x || 0, savedPosition.y || 0);
-          initialScrollDoneRef.current = true;
-          return;
-        }
-
-        const firstWeekEl = weekRefs.current[0];
-        if (!firstWeekEl && retryCount < 5) {
-          retryCount += 1;
-          timer = setTimeout(tryInitialScroll, 80);
-          return;
-        }
-        if (firstWeekEl) {
-          scrollToWeek(firstWeekEl, 'instant');
-        }
+    let rafId = null;
+    const retryMonthScroll = () => {
+      if (alignMonthScroll()) return;
+      if (retryCount < 5) {
+        retryCount += 1;
+        rafId = window.requestAnimationFrame(retryMonthScroll);
       }
-      initialScrollDoneRef.current = true;
     };
 
-    timer = setTimeout(tryInitialScroll, 80);
+    rafId = window.requestAnimationFrame(retryMonthScroll);
     return () => {
-      if (timer) clearTimeout(timer);
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
     };
-  }, [isInitialScrollReady, scheduleScrollKey, scrollToTodayWeek, scrollToWeek, shouldAutoScrollToToday, targetDate, weekRefs]);
-
-  useEffect(() => {
-    if (targetDate || !initialScrollDoneRef.current || !isInitialScrollReady) return;
-    if (skipNextMonthAutoScrollRef.current) {
-      skipNextMonthAutoScrollRef.current = false;
-      return;
-    }
-    const timer = setTimeout(() => {
-      if (shouldAutoScrollToToday) {
-        scrollToTodayWeek();
-      } else {
-        const firstWeekEl = weekRefs.current[0];
-        if (firstWeekEl) {
-          scrollToWeek(firstWeekEl);
-        }
-      }
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [currentYear, currentMonth, isInitialScrollReady, scrollToTodayWeek, scrollToWeek, shouldAutoScrollToToday, targetDate, weekRefs]);
+  }, [
+    isInitialScrollReady,
+    scheduleScrollKey,
+    scrollToTodayWeek,
+    scrollToWeek,
+    shouldAutoScrollToToday,
+    targetDate,
+    targetWeekIdx,
+    weekRefs,
+  ]);
 
   return {
     todayWeekIdx,

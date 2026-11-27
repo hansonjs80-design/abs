@@ -558,7 +558,14 @@ export default function ShockwaveView({
     therapists,
   });
 
-  const today = getTodayKST();
+  const rawToday = getTodayKST();
+  const rawTodayYear = rawToday.getFullYear();
+  const rawTodayMonth = rawToday.getMonth();
+  const rawTodayDate = rawToday.getDate();
+  const today = useMemo(
+    () => new Date(rawTodayYear, rawTodayMonth, rawTodayDate),
+    [rawTodayYear, rawTodayMonth, rawTodayDate]
+  );
   const {
     baseTimeSlots,
     getDefaultReservationTime,
@@ -3182,7 +3189,7 @@ export default function ShockwaveView({
     scheduleScrollKey,
     currentYear,
     currentMonth,
-    isInitialScrollReady: !isScheduleMonthLoading && !isDeviceSettingsLoading,
+    isInitialScrollReady: !isScheduleMonthLoading && !isDeviceSettingsLoading && !isTextSettingsLoading,
     targetDate: pendingPatientHistoryNavigation?.date || null,
     onTargetDateScrolled: handlePatientHistoryDateScrollComplete,
     onNavigateToTodayMonth: handleNavigateToTodayMonth,
@@ -3354,7 +3361,11 @@ export default function ShockwaveView({
             : { width: '100%', minWidth: '1000px' }
           }
           ref={(el) => {
-            weekRefs.current[weekIdx] = el;
+            if (el) {
+              weekRefs.current[weekIdx] = el;
+            } else if (weekRefs.current[weekIdx] && !weekRefs.current[weekIdx].isConnected) {
+              weekRefs.current[weekIdx] = null;
+            }
           }}
         >
           {weekIdx === 0 && (

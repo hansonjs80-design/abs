@@ -115,3 +115,32 @@ test('visible schedule week ignores missing refs and rejects unusable input', ()
   assert.equal(getVisibleScheduleWeekIndex([], 200), -1);
   assert.equal(getVisibleScheduleWeekIndex([100, 500], Number.NaN), -1);
 });
+
+test('month navigation aligns today week or first week synchronously before paint without delayed scroll jumps', async () => {
+  const shockwaveViewUrl = new URL(
+    '../../components/shockwave/ShockwaveView.jsx',
+    import.meta.url
+  );
+  const scheduleContextUrl = new URL(
+    '../../contexts/ScheduleContext.jsx',
+    import.meta.url
+  );
+  const [navSource, viewSource, contextSource] = await Promise.all([
+    readFile(scheduleTodayNavigationUrl, 'utf8'),
+    readFile(shockwaveViewUrl, 'utf8'),
+    readFile(scheduleContextUrl, 'utf8'),
+  ]);
+
+  assert.match(navSource, /useIsomorphicLayoutEffect/);
+  assert.match(navSource, /if \(!scrollToTodayWeek\(true\)\) return false;/);
+  assert.match(navSource, /if \(!firstWeekEl \|\| !scrollToWeek\(firstWeekEl, 'instant'\)\) return false;/);
+  assert.match(navSource, /getAncestorTransformOffsetY\(weekEl\)/);
+  assert.doesNotMatch(navSource, /setTimeout\(tryInitialScroll/);
+  assert.doesNotMatch(navSource, /setTimeout\(\(\) => \{\s*if \(shouldAutoScrollToToday\)/);
+
+  assert.match(
+    viewSource,
+    /isInitialScrollReady:\s*!isScheduleMonthLoading && !isDeviceSettingsLoading && !isTextSettingsLoading/
+  );
+  assert.match(contextSource, /shockwaveScheduleScrollMemory\.clear\(\)/);
+});
